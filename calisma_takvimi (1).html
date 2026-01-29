@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Çalışma Takvimi</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #ffffff;
+        }
+
+        .app {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER */
+        .header {
+            height: 95px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 22px;
+        }
+
+            .header h2 {
+                margin: 0;
+                font-size: 36px;
+                font-weight: 600;
+            }
+
+            .header button {
+                border: 1px solid #000;
+                background: none;
+                padding: 10px 20px;
+                border-radius: 10px;
+                font-size: 18px;
+                cursor: pointer;
+            }
+
+        /* WEEKDAYS */
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            padding: 0 18px 6px;
+        }
+
+            .weekdays div {
+                text-align: center;
+                font-size: 21px;
+                font-weight: 600;
+                color: #444;
+            }
+
+        /* CALENDAR */
+        .calendar {
+            flex: 1.18;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 18px;
+            padding: 0 18px 14px;
+        }
+
+        /* CELL */
+        .day-cell {
+            position: relative;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.5s ease, box-shadow 0.5s ease;
+        }
+
+        /* TODAY */
+        .today {
+            outline: 3px solid #000;
+            outline-offset: -3px;
+        }
+
+        /* DAY NUMBER */
+        .day-label {
+            position: absolute;
+            top: 10px;
+            left: 12px;
+            font-size: 14px;
+            color: rgba(0,0,0,0.55);
+        }
+
+        /* INPUT */
+        .day-input {
+            width: 100%;
+            border: none;
+            background: none;
+            text-align: center;
+            font-size: 100px;
+            font-weight: 700;
+            color: #000;
+            outline: none;
+        }
+
+        /* BASE */
+        .empty {
+            background: #f1f1f1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+
+        <div class="header">
+            <button onclick="changeMonth(-1)">‹</button>
+            <h2 id="monthTitle"></h2>
+            <button onclick="changeMonth(1)">›</button>
+        </div>
+
+        <div class="weekdays">
+            <div>Pzt</div><div>Sal</div><div>Çar</div>
+            <div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div>
+        </div>
+
+        <div class="calendar" id="calendar"></div>
+    </div>
+
+    <script>
+        let currentDate = new Date();
+        let data = JSON.parse(localStorage.getItem("workCalendar") || "{}");
+
+        function renderCalendar() {
+        const cal = document.getElementById("calendar");
+        cal.innerHTML = "";
+
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const today = new Date();
+
+        document.getElementById("monthTitle").textContent =
+        currentDate.toLocaleString("tr-TR", { month: "long", year: "numeric" });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const offset = (firstDay + 6) % 7;
+
+        for (let i = 0; i < offset; i++) {
+        cal.appendChild(document.createElement("div"));
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+        const key = `${year}-${month}-${d}`;
+        const val = data[key] || "";
+
+        const cell = document.createElement("div");
+        cell.className = "day-cell";
+
+        if (
+        d === today.getDate() &&
+        month === today.getMonth() &&
+        year === today.getFullYear()
+        ) {
+        cell.classList.add("today");
+        }
+
+        const label = document.createElement("div");
+        label.className = "day-label";
+        label.textContent = d;
+
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "0.5";
+        input.className = "day-input";
+        input.value = val;
+
+        applyStyle(cell, val);
+
+        input.oninput = () => {
+        data[key] = input.value;
+        localStorage.setItem("workCalendar", JSON.stringify(data));
+        applyStyle(cell, input.value);
+        };
+
+        cell.appendChild(label);
+        cell.appendChild(input);
+        cal.appendChild(cell);
+        }
+        }
+function applyStyle(cell, value) {
+  const n = Number(value);
+  cell.className = "day-cell";
+  cell.style.boxShadow = "";
+
+  if (!value) {
+    cell.style.background = "#f1f1f1";
+    return;
+  }
+
+  /* 0 – 5  : KÖTÜ */
+  if (n < 5) {
+    const k = n / 5; // 0 → 1
+    const light = 92 - k * 12; // koyulaşır
+    cell.style.background = `hsl(0, 35%, ${light}%)`;
+    return;
+  }
+
+  /* 5 – 9 : TOPARLANMA */
+  if (n < 9) {
+    const k = (n - 5) / 4; // 0 → 1
+    const light = 80 - k * 10;
+    const sat = 35 + k * 20;
+    cell.style.background = `hsl(120, ${sat}%, ${light}%)`;
+    return;
+  }
+
+  /* 9 – 11.5 : ELİTE YAKLAŞMA */
+  if (n < 12) {
+    const k = (n - 9) / 2.5; // 0 → 1
+    const light = 68 - k * 12;   // DAHA PARLAK
+    const sat   = 55 + k * 25;   // DAHA CANLI
+
+    cell.style.background =
+      `linear-gradient(135deg,
+        hsl(155, ${sat}%, ${light}%),
+        hsl(165, ${sat}%, ${light + 4}%)
+      )`;
+
+    cell.style.boxShadow =
+      `0 0 ${18 + k * 28}px rgba(80,170,140,${0.25 + k * 0.35})`;
+
+    return;
+  }
+
+  /* 12+ : ELITE */
+  const k = Math.min((n - 12) / 4, 1); // 12 → 16
+  cell.style.background =
+    "linear-gradient(135deg, #6ea8ff, #b57bff)";
+
+  cell.style.boxShadow =
+    `0 0 ${45 + k * 70}px rgba(120,150,255,0.9),
+     0 0 ${90 + k * 140}px rgba(180,120,255,0.85)`;
+}
+
+        function changeMonth(delta) {
+        currentDate.setMonth(currentDate.getMonth() + delta);
+        renderCalendar();
+        }
+
+        renderCalendar();
+    </script>
+</body>
+</html>
